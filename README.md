@@ -1,4 +1,6 @@
-The code in this repository demonstrates a use for recourse as part of reinforcement learning. There are a number of key parameters.
+The code in this repository demonstrates a use for recourse as part of reinforcement learning. The code exists in nfg_learning_recourse_nash_noise.py
+
+There are a number of key parameters.
 
 The payoffs parameter. This is used for setting the rewards for a two player normal form game. A number of examples are included in the code and commented out. Comment and uncomment depending on which normal form game a strategy needs to be developed for. If other normal form game required than those available in the code, just ensure the rewards for the game are assigned to the payoffs parameter in a similar structure to the current examples in the code.
 
