@@ -2,7 +2,7 @@
 
 The code in this repository demonstrates a use for recourse as part of reinforcement learning. The code exists in nfg_learning_recourse_nash_noise.py
 
-<h2>Parameters</h2>h2>
+<h2>Parameters</h2>
 
 <h3>There are a number of key parameters.</h3>
 
