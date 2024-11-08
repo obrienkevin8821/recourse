@@ -1,6 +1,6 @@
 <h1>Recourse</h1>
 
-The code in this repository demonstrates a use for recourse as part of reinforcement learning. The code exists in nfg_learning_recourse_nash_noise.py
+The code in this repository demonstrates a use for recourse as part of reinforcement learning. The code exists in nfg_learning_recourse.py
 
 <h2>Parameters</h2>
 
