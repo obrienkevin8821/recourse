@@ -26,6 +26,6 @@ The <b>useSoftmax</b> parameter. Comments in code on lines 93 to 99 approximatel
 <b>alpha, decay_alpha, alpha_decay_rate</b> - Parameters used for learning rate, and whether to decay and by what over a number to reduce it so that learner is relying more on past rewards than recent rewards by the end of learning, so that learning is slowed down as a strategy is converged on.  
 <b>tau, low_tau, decay_tau, tau_decay_rate</b> - Parameters used for softmax. If decaying tau overtime can use a decay rate. The low_tau parameter ensures the tau value has a minimum value so it can't reduce any further. With softmax, tau is used for determine the balance between exploiting existing knowledge or exploring for new knowledge. A high tau value encourages exploring, while a low value encourages exploiting. Typically to begin with it is good to explore but overtime during the learning process as it is coming to an end and a strategy is being settled upon, then exploit is the preferred approach.
 
-<b>Parameters for <u>nfg_learning_recourse_ac.py, which includes code for actor critic</u></b>
-<b>Line 47: alpha_theta</b>
+<b>Parameters for <u>nfg_learning_recourse_ac.py, which includes code for actor critic:</u></b><br>
+<b>Line 47: alpha_theta</b><br>
 <b>Line 519: self.theta</b>
