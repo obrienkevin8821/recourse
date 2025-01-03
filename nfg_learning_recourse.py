@@ -4,11 +4,11 @@ import numpy as np
 import nashpy as nash # used for calculating nash
 
 num_runs = 1
-num_episodes = 800 
+num_episodes = 1010
 num_agents = 2
 
-alpha = 0.1
-decay_alpha = True
+alpha = 0.5
+decay_alpha = False
 alpha_decay_rate = 0.999
 tau = 1.0
 low_tau = 0.1
@@ -43,14 +43,25 @@ exp_x_agent1=[]
 useTarget = True  
 budget = 10
 adjust_by = 0.1 
-useNash = 0 # 0, aim for highest reward. 1, Nash with max sum of payoffs. 2, Nash which is not max sum of payoffs. 
+useNash = 2 # 0, aim for highest reward. 1, Nash with max sum of payoffs. 2, Nash which is not max sum of payoffs. 
             # 3, if more than one Nash exists, give both players a different target but both represent Nash Equilibrium, 
             # but player 1 target results in a higher sum of rewards than player 2.
             # 4, same as 3 except player 2 gets the target with the higher sum of rewards
 
 # some paramters to try out agent ignoring recourse at certain intervals
-ignoreRecourse=False
-atIntervals = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] # Agent 0 will ignore recourse at intervals specified in this array
+ignoreRecourse=False # if useSoftmax parameter used then this is redundant, so can remove it...
+# Agent 0 will ignore recourse at intervals specified in this array
+atIntervals = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] 
+
+manSetRanges=False # if set to true the target will be manually set by the user, not based on useNash
+
+# parameter to determine if softmax, recourse or both should be used for action selection
+# 0 - softmax, no recourse
+# 1 - softmax, recourse (redundant, get same results as if set to 2. Just have it here to test and show this.) 
+# 2 - recourse, no softmax. Could be any other value apart from 2. Once it is not set to 0 or 1 or 3, then this is the default. 
+# useSoftmax = 2, and = 1, should produce the same result. 
+# 3 - softmax with a bit of recourse for a few episodes here and there.
+useSoftmax = 3
 
 # simple NFG for testing purposes
 # payoffs = [
@@ -71,10 +82,10 @@ atIntervals = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] # Agent 0 will ignore recou
 # ]
 
 # stag hunt NFG
-# payoffs = [
-#     [[5, 5], [0, 2]],
-#     [[2, 0], [1, 1]]
-# ]
+payoffs = [
+    [[5, 5], [0, 2]],
+    [[2, 0], [1, 1]]
+]
 
 # rock paper scissors NFG
 # payoffs = [
@@ -84,10 +95,10 @@ atIntervals = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] # Agent 0 will ignore recou
 # ]
 
 # prisoner dilemma NFG
-payoffs = [
-    [[3, 3], [0, 5]],
-   [[5, 0], [1, 1]]
-]
+# payoffs = [
+#     [[3, 3], [0, 5]],
+#    [[5, 0], [1, 1]]
+# ]
 
 # An asymmetric normal form game - Battle of the sexes - both want different things (e.g. one wants football, the other wants opera)
 # payoffs = [
@@ -205,11 +216,11 @@ def single_play_payoff(row, col, payoffs, nashCalc):
     else:
         return probs, row_payoffs, col_payoffs
 
-def do_episode(agent_list, ranges):
+def do_episode(agent_list, ranges, episode_number):
     probs_selected_actions = []
     a = 0 # which agent. 0 for agent 0, then 1 for agent 1.
     for agent in agent_list:
-        prob_action = agent.select_action(a, ranges[a]) 
+        prob_action = agent.select_action(a, ranges[a], episode_number) 
         probs_selected_actions.append(prob_action)
         a += 1
     
@@ -318,7 +329,7 @@ def target(payoffs, useNash):
         ne = list(nfg.vertex_enumeration())
 
         if len(ne) > 1: # more than one nash exists
-            print("more than one nash exists")
+            print("more than one nash exists", ne)
             agent0_one_nash = []
             agent1_one_nash = []
             max = float('-inf')
@@ -423,6 +434,10 @@ def target(payoffs, useNash):
 
     # Calculate ranges for each agent. In most cases it will be the same for both agents - I assume so, may need to confirm this
     # Just calculating for one agent for now.
+
+    #temp, need to comment out as just using to fix target action probability values for now.
+    #agent0_probs = [0.25, 0.75]
+    #agent1_probs = [0.25, 0.75]
     ranges_agent0, ranges_agent1 = setRanges(agent0_probs, agent1_probs)
 
     return agent0_probs, agent1_probs, ranges_agent0, ranges_agent1
@@ -468,22 +483,58 @@ class Agent:
         
         return np.random.choice(len(q_values), p=exp_x)
 
-    def select_action(self, a, ranges):   # will rename to set_action.     
+    def select_action(self, a, ranges, episode_number):   # will rename to set_action.     
         q_values = np.array(self.action_values)
         print("SOFTMAX: self.action_values:", q_values)
-
+        print("EPISODE NUMBER:", episode_number)
         # may not be required as use each q value - see line 487 - softmax_action < l - 1:
         # will select all the q values. All softmax_action gives is where to start - the first or second or third etc q-value
         # could just set softmax_action = 0 and it should work the same?
-        softmax_action = self.softmax_select_action(q_values, self.tau, a) 
+        #softmax_action = self.softmax_select_action(q_values, self.tau, a) 
 
         # Ignore softmax choice and just go with first action. 
         # A value picked from a range will be assigned to the first action, 
         # then move onto the second action, then the third (if one in the nfg being learned) etc.. 
         # All actions will be updated with a value selected from a range.
-        
-        softmax_action = 0 
-        
+        #softmax_action = 0 
+
+        if useSoftmax == 0:
+            softmax_action = self.softmax_select_action(q_values, self.tau, a)
+            # need a scaled value array which has length == no of actions. initialise all
+            # values to 0, and just update 1 with value 1 based on softmax selection
+            # then return scaled value array. that gets us out of this function.
+            scaled_values = np.zeros(len(q_values))
+            scaled_values[softmax_action] = 1
+            print("scaled_values", scaled_values, "softmax_action", softmax_action)
+            return scaled_values
+        elif useSoftmax == 1:
+            softmax_action = self.softmax_select_action(q_values, self.tau, a)
+        elif useSoftmax == 3:
+            # sr = 0
+            # r_ranges = [(90, 100), (190, 200), (290, 300), (390, 400), (490, 500), (590, 600), (690, 700), (790, 800)]
+            # # Check if the number is within any of the ranges
+            # for start, end in r_ranges:
+            #   if start <= episode_number <= end:
+            #       sr = 1
+            if episode_number % 100 >= 0 and episode_number % 100 < 10:
+               #Perform recourse for 10 iterations starting from 50, 100, 150, etc.
+            #if sr == 1: 
+               softmax_action = self.softmax_select_action(q_values, self.tau, a) # just need this for producing the final graph, ignore action returned - see next line
+               softmax_action = 0
+               print("EPISODE USES RECOURSE")
+            else: # same as if useSoftmax = 0. Maybe put this code into a function as its used twice
+                softmax_action = self.softmax_select_action(q_values, self.tau, a)
+                # need a scaled value array which has length == no of actions. initialise all
+                # values to 0, and just update 1 with value 1 based on softmax selection
+                # then return scaled value array. that gets us out of this function.
+                scaled_values = np.zeros(len(q_values))
+                scaled_values[softmax_action] = 1
+                print("scaled_values", scaled_values, "softmax_action", softmax_action)
+                return scaled_values
+        else:
+            softmax_action = self.softmax_select_action(q_values, self.tau, a) # just need this for producing the final graph, ignore action returned - see next line
+            softmax_action = 0 # not using softmax
+
         l = len(payoffs)
         action_probs = []
         for i in range(l):
@@ -493,7 +544,8 @@ class Agent:
             if useTarget:
                 action_probs[softmax_action] = round(random.uniform(ranges[softmax_action][0], ranges[softmax_action][1]), 2)
             else:
-                action_probs[softmax_action] = round(random.uniform(0, 1), 2) # otherwise choose random values from 0 to 1 for each action. Dont use ranges list
+                # otherwise choose random values from 0 to 1 for each action. Dont use ranges list
+                action_probs[softmax_action] = round(random.uniform(0, 1), 2) 
             if softmax_action < l - 1:
                 softmax_action += 1
             else:
@@ -523,6 +575,7 @@ class Agent:
         for i in range(len(payoff)):
             print("self.action_values[i]", self.action_values[i], "alpha", self.alpha, "payoff[i]", payoff[i])
             self.action_values[i] = self.action_values[i] + (self.alpha * (payoff[i] - self.action_values[i])) 
+
             print("action value", i, "", self.action_values[i])
 
 def main():
@@ -530,13 +583,22 @@ def main():
     ranges_agent0 = []
     ranges_agent1 = []
     if useTarget:
-        agent0_probs, agent1_probs, ranges_agent0, ranges_agent1 = target(payoffs, useNash) # useNash ???
+        agent0_probs, agent1_probs, ranges_agent0, ranges_agent1 = target(payoffs, useNash) # useNash 0, 1, 2, 3 -- see near head of program for value meanings
+        print("######## Agent 0 Probs ###########", agent0_probs)
+        print("######## Agent 1 Probs ###########", agent1_probs)
     else:
         for i in range(len(payoffs)):
             ranges_agent0.append([0, 1])
             ranges_agent1.append([0, 1])   
     ranges.append(ranges_agent0)
     ranges.append(ranges_agent1)
+
+    print("######## RANGES ###########", ranges)
+   
+
+    if manSetRanges: # manually change the target probs for an agent. E.g. change target on prisoner to cooperate([1.0, 0.0]) for each agent instead of defect ([0.0, 1.0]).
+        agent0_probs = [1.0, 0.0]
+        agent1_probs = [1.0, 0.0]
 
     for run in range(num_runs):
         print("----- Beginning run", run, "-----")
@@ -557,7 +619,7 @@ def main():
             print("     *** Episode", episode, "***")   
             
             # on episodes 330, 500, 670 add noise by corrupting ranges.
-            if softmax_episode in [1330, 1500, 1670]: # set to values greater than number of episodes if you don't want noise added
+            if softmax_episode in [1330000, 15000000, 16700000]: # set to values greater than number of episodes if you don't want noise added
                 print("corrupting ranges")
                 for i in range(len(agent0_probs)): 
                     ranges_agent0[i][1] = 1
@@ -565,11 +627,11 @@ def main():
                 for i in range(len(agent1_probs)): 
                     ranges_agent1[i][1] = 1
                     ranges_agent1[i][0] = 0
-            ranges.clear()
-            ranges.append(ranges_agent0)
-            ranges.append(ranges_agent1)       
+                ranges.clear()
+                ranges.append(ranges_agent0)
+                ranges.append(ranges_agent1)       
             
-            do_episode(agent_list, ranges)
+            do_episode(agent_list, ranges, softmax_episode)
             
             if decay_alpha:
                 for agent in agent_list:
@@ -622,6 +684,11 @@ def main():
                     ranges.clear()
                     ranges.append(ranges_agent0)
                     ranges.append(ranges_agent1)
+                    # comment out below. Just have for now to manually set ranges - will use same range wherever it is in learning cycle.
+                    #ranges.clear()
+                    #ranges.append([[0.23, 0.26], [0.73, 0.76]])
+                    #ranges.append([[0.23, 0.26], [0.73, 0.76]])
+                    
         print(consecutiveCount)                
         print("run over")
         print("agent", 0, "action values", agent_list[0].action_values)
@@ -640,7 +707,8 @@ def main():
 
         draw_graph(episodes, action_value_agent0_action1, action_value_agent1_action1, "Q Values per episode", "Q Values")
         draw_graph(episodes, actions1_agent0, actions1_agent1, "Actions per episode", "Probability of action 0")
-        draw_graph(episodes, exp_x_agent0, exp_x_agent1, "Actions per episode: Softmax", "Probability of action 0")
+        if useSoftmax != 0:
+            draw_graph(episodes, exp_x_agent0, exp_x_agent1, "Actions per episode: Softmax", "Probability of action 0")
 
         # other plots just show for first action over number of episodes
         # if want to show values for two of the available actions for one player, 

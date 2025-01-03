@@ -1,0 +1,119 @@
+Q Values:
+agent 0 action values [0.13551716417060544, 1.180689552227474]
+agent 1 action values [0.1723264200281323, 1.229768560037509]
+
+These are the actions which the Q values translate into: basically [0,1] for both. Used softmax to translate these to get these values. 
+
+Agent 0 final actions: [2.88975778e-05 9.99971102e-01]
+Agent 1 final actions: [2.55608938e-05 9.99974439e-01]
+
+
+
+
+
+
+
+Matching Pennies (820 episodes):
+Full Recourse:
+agent 0 action values [-0.0010640674991618778, 0.0010640674991618778]
+agent 1 action values [-0.0008617505014832799, 0.0008617505014832799]
+Agent 0 final actions: [0.49467986 0.50532014]
+Agent 1 final actions: [0.49569135 0.50430865]
+
+Full Softmax:
+agent 0 action values [-0.11127969263627346, 0.11127969263627346]
+agent 1 action values [0.03753275860011985, -0.03753275860011985]
+Agent 0 final actions: [0.09747558 0.90252442]
+Agent 1 final actions: [0.67932144 0.32067856]
+
+Blended (softmax but every 50 do 10 using recourse):
+agent 0 action values [-0.050329500876317546, 0.050329500876317546]
+agent 1 action values [0.1415057960611324, -0.1415057960611324]
+Agent 0 final actions: [0.26764772 0.73235228]
+Agent 1 final actions: [0.9442817 0.0557183]
+
+Blended (softmax but every 50 do 20 using recourse):
+agent 0 action values [0.006541151500405108, -0.006541151500405108]
+agent 1 action values [-0.02681167329058604, 0.02681167329058604]
+Agent 0 final actions: [0.53265919 0.46734081]
+Agent 1 final actions: [0.36906421 0.63093579]
+Note: One agent is getting closer to 50/50.
+
+
+
+Matching Pennies (2000 episodes):
+Full Recourse:
+agent 0 action values [0.0014112706705638155, -0.0014112706705638155]
+agent 1 action values [0.00523521880331746, -0.00523521880331746]
+Agent 0 final actions: [0.50705588 0.49294412]
+Agent 1 final actions: [0.52615221 0.47384779]
+
+Full Softmax:
+agent 0 action values [-0.09461568034940436, 0.09461568034940436]
+agent 1 action values [0.11697649593103716, -0.11697649593103716]
+Agent 0 final actions: [0.1309809 0.8690191]
+Agent 1 final actions: [0.9120984 0.0879016]
+
+Blended (softmax but every 50 do 10 using recourse):
+agent 0 action values [0.039343690393864546, -0.039343690393864546]
+agent 1 action values [0.036636656913404245, -0.036636656913404245]
+Agent 0 final actions: [0.68715968 0.31284032]
+Agent 1 final actions: [0.67540475 0.32459525]
+Note: Very similar policies for both agents. 2/3 to 1/3, moving towards 50/50
+
+Blended (softmax but every 50 do 20 using recourse):
+agent 0 action values [0.053465380357684646, -0.053465380357684646]
+agent 1 action values [-0.027151709624087948, 0.027151709624087948]
+Agent 0 final actions: [0.74446522 0.25553478]
+Agent 1 final actions: [0.36748203 0.63251797]
+Note: Had not made much difference.
+
+
+Matching Pennies (5000 episodes):
+
+Blended (softmax but every 50 do 10 using recourse):
+agent 0 action values [-0.0047604757093950715, 0.0047604757093950715]
+agent 1 action values [-0.002701406350226105, 0.002701406350226105]
+Agent 0 final actions: [0.47621559 0.52378441]
+Agent 1 final actions: [0.48649625 0.51350375]
+
+Full Softmax:
+agent 0 action values [0.060181718822375815, -0.060181718822375815]
+agent 1 action values [-0.02019008990290192, 0.02019008990290192]
+Agent 0 final actions: [0.76917069 0.23082931]
+Agent 1 final actions: [0.40039926 0.59960074]
+
+Conclusion: 5000 seems to do the trick when using blended.Maybe change it so same range is always used. E.g. on matching pennies use a range of 0.4 to 0.6 whenever recourse is used.
+
+Matching Pennies (1000 episodes):
+Blended (softmax but every 50 do 10 using recourse, with recourse range always set from 0.4 to 0.6):
+agent 0 action values [-0.11381673132531551, 0.11381673132531551]
+agent 1 action values [0.20791517211115293, -0.20791517211115293]
+Agent 0 final actions: [0.09310197 0.90689803]
+Agent 1 final actions: [0.9846066 0.0153934]
+
+Matching Pennies (5000 episodes):
+Blended (softmax but every 50 do 10 using recourse, with recourse range always set from 0.4 to 0.6):
+agent 0 action values [0.01143385487751803, -0.01143385487751803]
+agent 1 action values [0.03314714479165841, -0.03314714479165841]
+Agent 0 final actions: [0.55692144 0.44307856]
+Agent 1 final actions: [0.65992116 0.34007884]
+
+Matching Pennies (10000 episodes):
+Full Softmax:
+agent 0 action values [-0.0037083812949346684, 0.0037083812949346684]
+agent 1 action values [-0.006795302710017773, 0.006795302710017773]
+Agent 0 final actions: [0.48146659 0.51853341]
+Agent 1 final actions: [0.46607569 0.53392431]
+
+Blended (softmax but every 50 do 10 using recourse, with recourse range always set from 0.4 to 0.6):
+agent 0 action values [0.001431310198783775, -0.001431310198783775]
+agent 1 action values [-0.004575842368824714, 0.004575842368824714]
+Agent 0 final actions: [0.50715606 0.49284394]
+Agent 1 final actions: [0.47713674 0.52286326]
+
+Conclusion: Recourse has an effect as seen from this last run but softmax works as well over 10,000 episodes to give 50/50 split.... 
+Probably need about 6000 episodes instead of 10000, but using recourse every 50 episodes. Reduce it to every 200 and see. 
+Probably just need more episodes, but I think in general the principle shows it does have an effect, but maybe not based on softmax results....
+Maybe reduces the number of episodes to learn by using recourse. Not by much though 500 to 1000 maybe?
+Could try a different NFG like rock paper scissors, or prisoner but to try and get it to learn cooperation.
