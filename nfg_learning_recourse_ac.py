@@ -1,7 +1,35 @@
+# amended version attempting actor critic implementation.
+# Just have it for 2 action NFG for now - see u_linear function below - line 24.
+# The critic produces a value for theta which is used by the actor to update its policy.
+# Theta is calculated based on a gradient. The gradient is the direction towards a desired result.
+# Theta is recalculated on every episode.
+# Code for actor critic is found with comment ## AC ##
+
 import random
 import matplotlib.pyplot as plt
 import numpy as np 
 import nashpy as nash # used for calculating nash
+
+
+## AC Start ##
+# required for actor critic - "pip install jax"
+import jax.numpy as jnp
+from jax import grad, jit
+from jax.nn import softmax
+
+# required for actor critic - "pip install ramo"
+from ramo.strategy.strategies import softmax_strategy
+
+# required for actor critic - utility function for single objective, 2 player, 2 action game
+def u_linear(w):
+    return lambda p: (p[0] * w) + (p[1] * (1-w))
+
+w1_row = 1.0
+w1_col = 0.0
+u_row = u_linear(w1_row)
+u_col = u_linear(w1_col)
+u_tpl = (u_row, u_col)
+## AC End ##
 
 num_runs = 1
 num_episodes = 1010
@@ -14,6 +42,13 @@ tau = 1.0
 low_tau = 0.1
 decay_tau = True
 tau_decay_rate = 0.99
+
+## AC Start ##
+alpha_theta = 0.00961 # low value when target is mixed policy like [0.25 0.75], but use higher rate e.g. 0.2 when target is pure policy like [0,1] ??
+alpha_theta_decay = 1
+alpha_q = 0.5
+alpha_q_decay=0.999
+## AC End ##
 
 # arrays to store action reward values for action 1 after each episode so that these values maybe graphed
 # these arrays will be used on the y-axis(vertical)
@@ -436,8 +471,8 @@ def target(payoffs, useNash):
     # Just calculating for one agent for now.
 
     #temp, need to comment out as just using to fix target action probability values for now.
-    #agent0_probs = [0.25, 0.75]
-    #agent1_probs = [0.25, 0.75]
+    agent0_probs = [0.25, 0.75]
+    agent1_probs = [0.25, 0.75]
     ranges_agent0, ranges_agent1 = setRanges(agent0_probs, agent1_probs)
 
     return agent0_probs, agent1_probs, ranges_agent0, ranges_agent1
@@ -463,10 +498,48 @@ def setRanges(agent0_probs, agent1_probs):
     return ranges_agent0, ranges_agent1
 
 class Agent:
-    def __init__(self, a, t):
+    def __init__(self, a, t, u, a_id):
         self.alpha = a
         self.tau = t
         self.action_values = [0 for a in range(num_actions)]
+        
+        ## AC Start ##
+        print("self.u :::::::::::::::::::::: ", u)
+        self.u = u
+        self.grad = jit(grad(self.objective_function))
+        self.alpha_theta = alpha_theta # 0.01
+        self.alpha_theta_decay = alpha_theta_decay # 1
+        self.alpha_q = alpha_q # 0.01
+        self.alpha_q_decay = alpha_q_decay # 1
+        #self.theta = np.zeros(num_actions)
+        # May have to initialise theta based on taget policy - mulitply the values for target by 10, or some value to give theta.
+        # Generally target policy for each agent will be the same, but in some instances maybe different, but can still probably multiply by 10 for both agents, or by some other value which is the same. May need to try and figure out how to get the optimal initial theta values..
+        #self.theta = np.array([0.0, 10.0]) # want to encourage policy which is more inclined to 2nd action - if target policy is e.g. [0, 1]
+        #self.theta = np.array([10.0, 0.0]) # want to encourage policy which is more inclined to 1st action - if target policy is e.g. [1, 0]
+        self.theta = np.array([0.0, 4.45]) # want to encourage policy which is slightly more inclined to 2nd action - if target policy is e.g. [0.25, 0.75]
+        self.policy = softmax_strategy(self.theta)
+        self.q_values_ac = np.zeros((num_actions, 1))
+        self.a_id = a_id
+        ## AC End ##
+
+    ## AC Start ##    
+    def objective_function(self, theta, q_values_ac):
+        """The objective function for the agent. This is the SER criterion.
+
+        Args:
+            theta (ndarray): The policy parameters.
+            q_values_ac (ndarray): The expected returns for the actions.
+
+        Returns:
+            float: The utility from the current policy and Q-values.
+
+        """
+        policy = softmax(theta)
+        expected_returns = jnp.matmul(policy, q_values_ac)
+        #utility = self.u[self.a_id](expected_returns)
+        utility = self.u[0](expected_returns) # always 0, each agent on there turn is designated as player 1 for utility purpose
+        return utility
+    ## AC End ##
 
     def softmax_select_action(self, q_values, tau, a):
         print("ITS SOFTMAX EXPLORE:", q_values, "TAU is ", tau)
@@ -517,7 +590,7 @@ class Agent:
             #   if start <= episode_number <= end:
             #       sr = 1
             if episode_number % 100 >= 0 and episode_number % 100 < 10:
-               #Perform recourse for 10 iterations starting from 50, 100, 150, etc.
+               #Perform recourse for 10 iterations starting from 100, 200, 300, etc.
             #if sr == 1: 
                softmax_action = self.softmax_select_action(q_values, self.tau, a) # just need this for producing the final graph, ignore action returned - see next line
                softmax_action = 0
@@ -574,9 +647,36 @@ class Agent:
     def update(self, payoff):
         for i in range(len(payoff)):
             print("self.action_values[i]", self.action_values[i], "alpha", self.alpha, "payoff[i]", payoff[i])
-            self.action_values[i] = self.action_values[i] + (self.alpha * (payoff[i] - self.action_values[i])) 
-
+            self.action_values[i] += self.alpha * (payoff[i] - self.action_values[i])  
             print("action value", i, "", self.action_values[i])
+            self.update_q_table(i, payoff[i])
+            self.update_ac() ## AC ##
+
+    ## AC Start ##
+    def update_ac(self):
+        self.theta += self.alpha_theta * self.grad(self.theta, self.q_values_ac)
+        self.policy = softmax_strategy(self.theta)
+        print("policy:", self.policy, "agent:", self.a_id, "theta", self.theta, "self.q_values_ac", self.q_values_ac)
+        #self.update_parameters()
+
+    def update_parameters(self):
+        """Update the hyperparameters. Decays the learning rate for the Q-values and policy parameters."""
+        self.alpha_q *= self.alpha_q_decay
+        self.alpha_theta *= self.alpha_theta_decay
+
+    def update_q_table(self, action, reward):
+        """Update the Q-table based on the chosen actions and the obtained reward.
+
+        Args:
+            action (int): The action chosen by this agent.
+            reward (float): The reward obtained by this agent.
+
+        Returns:
+
+        """
+        self.q_values_ac[action] += self.alpha_q * (reward - self.q_values_ac[action])
+        
+    ## AC End ##
 
 def main():
     ranges = []
@@ -605,7 +705,7 @@ def main():
         
         agent_list = []
         for agent in range(num_agents):
-            agent_list.append(Agent(alpha, tau))
+            agent_list.append(Agent(alpha, tau, u_tpl, agent))
         
         # for range adjustment on action selection
         softmax_episode = 0
@@ -702,13 +802,23 @@ def main():
         final_actions /= np.sum(final_actions)
         print("Agent 1 final actions:", final_actions)
 
+        ## AC Start ##
+        print("AC agent", 0, "policy", agent_list[0].policy)
+        print("AC agent", 1, "policy", agent_list[1].policy)
+        
+        # q_values_ac
+        print("AC agent", 0, "q_values_ac", agent_list[0].q_values_ac)
+        print("AC agent", 1, "q_values_ac", agent_list[1].q_values_ac)
+        
+        ## AC End ##
+
         if useTarget:
             print(f"agent0_probs {agent0_probs}, agent1_probs {agent1_probs}, ranges_agent0 {ranges_agent0}, ranges_agent1 {ranges_agent1}")
 
-        draw_graph(episodes, action_value_agent0_action1, action_value_agent1_action1, "Q Values per episode", "Q Values")
-        draw_graph(episodes, actions1_agent0, actions1_agent1, "Actions per episode", "Probability of action 0")
-        if useSoftmax != 0:
-            draw_graph(episodes, exp_x_agent0, exp_x_agent1, "Actions per episode: Softmax", "Probability of action 0")
+        #draw_graph(episodes, action_value_agent0_action1, action_value_agent1_action1, "Q Values per episode", "Q Values")
+        #draw_graph(episodes, actions1_agent0, actions1_agent1, "Actions per episode", "Probability of action 0")
+        #if useSoftmax != 0:
+            #draw_graph(episodes, exp_x_agent0, exp_x_agent1, "Actions per episode: Softmax", "Probability of action 0")
 
         # other plots just show for first action over number of episodes
         # if want to show values for two of the available actions for one player, 

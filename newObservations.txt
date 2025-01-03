@@ -1,0 +1,36 @@
+High alpha (e.g. 0.9), learning rate => learn quicker (more exploit). Low rate, e.g. 0.1, learn slower, more exploit - convergence can take longer.
+Have alpha values from 0 to 1. It does decay through the run of episodes.
+
+Softmax, 1000 episodes on stag - gives highest reward nash [1, 0]. Note alpha is set to 0.1:
+agent 0 action values [4.999999999999994, 1.9999999999999984]
+agent 1 action values [4.999999999999994, 1.9999999999999984]
+Agent 0 final actions: [1.00000000e+00 9.35762297e-14]
+Agent 1 final actions: [1.00000000e+00 9.35762297e-14]
+
+
+Softmax, 1000 episodes on stag but with some recourse for a different nash with lower reward [0,1]. Note alpha is set to 0.9:
+Note: Recourse is used from episodes 50 to 60, 100 to 110, 150 to 160 etc ....
+gent 0 action values [0.11594001099467754, 1.0231880021989355]
+agent 1 action values [0.1490657287983658, 1.0298131457596733]
+Agent 0 final actions: [1.14768364e-04 9.99885232e-01]
+Agent 1 final actions: [1.49588290e-04 9.99850412e-01]
+Note: if learning rate is 0.1, and not 0.9 as above, then I get similar result as if using softmax. Not quite the softmax result which is more [1, 0], but close [0.998, -0.002]
+
+Softmax, 1000 episodes on stag - gives highest reward nash [1, 0]. Note alpha is set to 0.9: 
+agent 0 action values [5.0, 2.0]
+agent 1 action values [5.0, 2.0]
+Agent 0 final actions: [1.00000000e+00 9.35762297e-14]
+Agent 1 final actions: [1.00000000e+00 9.35762297e-14]
+Note: Learns much quicker.
+
+With alpha at 0.999, no decay on it, 50000 episodes, full recourse:
+agent 0 action values [1.19995014994995, 1.23999002998999]
+agent 1 action values [1.20000000004995, 1.24000000000999]
+Agent 0 final actions: [0.40121653 0.59878347]
+Agent 1 final actions: [0.40131234 0.59868766]
+agent0_probs [0.25, 0.75], agent1_probs [0.25, 0.75], ranges_agent0 [[0.25, 0.25], [0.75, 0.75]], ranges_agent1 [[0.25, 0.25], [0.75, 0.75]]
+It starts to get closer to this target ..... Even with full recourse the target is difficult to achieve of [0.25, 0.75]
+
+
+
+High alpha makes it more responsive to recent rewards. Potentially this means the last 10 episodes are all using recourse so learning is swayed by this. Maybe extend learning out to 1020 episodes so last 10 is softmax instead of recourse...

@@ -1,0 +1,54 @@
+https://github.com/wilrop/ramo/blob/main/ramo/learner/indep_actor_critic.py
+
+Using Actor Critic to develop policies where target for learning involves mixed probabilities e.g. (0.2, 0.8).
+Q Learning appears fine when target for learning involves pure probabilities(0,1).
+
+Have only focussed on using Actor Critic for stag hunt to target learning a strategy which gives a Nash Equilibrium which is not the Nash with highest reward - (0.25, 0.75)
+Had to set the following hyper parameter values to achieve this:
+
+alpha_theta = 0.00961
+self.theta = np.array([0.0, 4.45]) # initialization
+useSoftmax = 3 # softmax with a bit of recourse for a few episodes here and there.
+num_episodes = 1010
+
+Note: SOMETIMES AC Policy IS WELL OFF WITH THESE PARAMETERS. Took alot of testing this, trying out different combinations of alpha_theta, and self.theta. Took about 20 goes. Eventually settled on these parameters, and they work some of the time (once every 2 or 3 goes from what I have seen). Other factors may come into play, like how often recourse is used and for how many episodes - But have not explored that yet. ust leave frequency of recourse and number of episodes fixed for now.
+Get these as output:
+
+AC agent 0 policy [0.2274818 0.7725182]
+AC agent 1 policy [0.22146796 0.77853204]
+
+Tested also using Actor Critic for learning pure probabilities, just (0, 1) for now, another Nash which is not the Nash with highest reward. It worked.
+Had to set the following hyper parameter values to achieve this:
+
+alpha_theta = 0.2
+self.theta = np.array([0.0, 10.0]) # initialization
+useSoftmax = 3 # softmax with a bit of recourse for a few episodes here and there.
+num_episodes = 1010
+
+Could acheive this with Q learning anyway - have experimented with alpha and alpha decay on (0, 1). I have this noted in another txt file in this folder.
+
+Note: Have not tested for a target of (1, 0) yet. Should be able to achieve this without recourse and just using softmax. Could probably have parameters as:
+
+alpha_theta = 0.01
+self.theta = np.array([0.0, 0.0]) # initialization, could possibly use np.array([10.0, 0.0]), but if using softmax only and no recourse then 0.0, 0.0 should be fine.
+useSoftmax = 0 # softmax, no recourse
+num_episodes = 1010
+
+Not important this test as can achieve with Q Learning anyway, and Softmax only.
+
+
+NEXT STEPS:
+
+0. Test where target is (0.75, 0.25) and determine values for alpha_theta and self.theta. From this see if there is some kind of formula you can use to determine the values for alpha_theta and self.theta based on mixed probability targets.
+
+1. Test with another NFG e.g. Matching pennies to achieve target of (0.5, 0.5). See what parameter values are needed for this.
+
+2. If that goes well, think of solution to enable hyperparameter values to be produced based on target. Other factors may come into play, like how often recourse is used and for how many episodes.
+
+3. More than 2 action NFG - e.g. rock, paper, scissors.
+
+4. When target for each agent is different. Agent 1 target is (1, 0) but agent 2 is (0.25, 0.75). Use Q-Learner for agent 1, but actor critic for agent 2?
+
+5. Expands on point 2 basically. Look into how you can go about picking values for theta and alpha_theta based on target mixed probabilities. Would some kind of lookup be acceptable. This could be difficult, cause if even the theta values are adjusted only by a tiny amount, this can have a big impact - you get nowhere near target. Might be tricky to figure this bit out. 
+
+6. See if I can show this all in an action graph.
